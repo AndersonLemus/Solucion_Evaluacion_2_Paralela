@@ -1,0 +1,14 @@
+# Ejecutables generados
+secuencial/secuencial_monte_carlo
+paralela_cuda/paralelismo_monte_carlo
+
+# Archivos de IDE y cache
+.idea/
+__pycache__/
+*/__pycache__/
+*.py[cod]
+.Rhistory
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db

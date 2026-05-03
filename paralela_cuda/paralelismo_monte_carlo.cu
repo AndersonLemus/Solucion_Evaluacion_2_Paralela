@@ -16,6 +16,11 @@
         }                                                                       \
     } while (0)
 
+static bool es_potencia_de_dos(int valor)
+{
+    return valor > 0 && (valor & (valor - 1)) == 0;
+}
+
 __global__ void kernel_random_walk(long long* d_r2,
                                    long long  N,
                                    int        T,
@@ -69,7 +74,7 @@ __global__ void kernel_reduccion(long long* d_datos,
     }
 }
 
-int main(int argc, char* argv[]){ // Corregido argv[]
+int main(int argc, char* argv[]){
 
     if (argc < 3) {
         fprintf(stderr, "Uso: %s <N> <T> [hilos_por_bloque] [semilla]\n", argv[0]);
@@ -77,9 +82,21 @@ int main(int argc, char* argv[]){ // Corregido argv[]
     }
 
     long long N               = atoll(argv[1]);
-    int       T               = atoi(argv[2]); // Corregido atoi
+    int       T               = atoi(argv[2]);
     int       hilos_por_bloque = (argc >= 4) ? atoi(argv[3]) : 256;
     uint64_t  semilla         = (argc >= 5) ? (uint64_t)atoll(argv[4]) : 42ULL;
+
+    if (N <= 0 || T <= 0) {
+        fprintf(stderr, "Error: N y T deben ser enteros positivos.\n");
+        return 1;
+    }
+
+    if (!es_potencia_de_dos(hilos_por_bloque) || hilos_por_bloque > 1024) {
+        fprintf(stderr,
+                "Error: hilos_por_bloque debe ser potencia de 2 y estar entre 1 y 1024.\n"
+                "Valores recomendados: 64, 128, 256, 512 o 1024.\n");
+        return 1;
+    }
 
     long long num_bloques = (N + hilos_por_bloque - 1) / hilos_por_bloque; 
     
@@ -98,6 +115,7 @@ int main(int argc, char* argv[]){ // Corregido argv[]
     // Fase 1: Random Walk
     CUDA_CHECK(cudaEventRecord(ev_inicio));
     kernel_random_walk<<<num_bloques, hilos_por_bloque>>>(d_r2, N, T, semilla);
+    CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaEventRecord(ev_fin));
     CUDA_CHECK(cudaEventSynchronize(ev_fin));
 
@@ -108,6 +126,7 @@ int main(int argc, char* argv[]){ // Corregido argv[]
     size_t mem_compartida = hilos_por_bloque * sizeof(long long);
     CUDA_CHECK(cudaEventRecord(ev_inicio));
     kernel_reduccion<<<num_bloques, hilos_por_bloque, mem_compartida>>>(d_r2, d_parciales, N);
+    CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaEventRecord(ev_fin));
     CUDA_CHECK(cudaEventSynchronize(ev_fin));
 
@@ -123,10 +142,20 @@ int main(int argc, char* argv[]){ // Corregido argv[]
 
     auto t_total_fin = std::chrono::steady_clock::now(); // Consistencia con steady_clock
     double tiempo_total = std::chrono::duration<double>(t_total_fin - t_total_inicio).count();
+    double msd = (double)suma_total / (double)N;
+    double error_relativo = fabs(msd - (double)T) / (double)T;
 
     printf("=== Resultados ===\n");
-    printf("  MSD calculado     : %.6f\n", (double)suma_total / N);
+    printf("  N                 : %lld\n", N);
+    printf("  T                 : %d\n", T);
+    printf("  Hilos por bloque  : %d\n", hilos_por_bloque);
+    printf("  Bloques           : %lld\n", num_bloques);
+    printf("  Semilla           : %llu\n", (unsigned long long)semilla);
+    printf("  MSD calculado     : %.6f\n", msd);
+    printf("  MSD teorico       : %d\n", T);
+    printf("  Error relativo    : %.6f\n", error_relativo);
     printf("  Kernel walk       : %.3f ms\n", ms_kernel);
+    printf("  Kernel reduccion  : %.3f ms\n", ms_reduccion);
     printf("  Tiempo total      : %.6f s\n", tiempo_total);
 
     // Limpieza

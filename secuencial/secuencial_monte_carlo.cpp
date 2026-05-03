@@ -1,5 +1,4 @@
 #include <iostream>
-#include <vector>
 #include <random>
 #include <chrono>
 #include <cmath>
@@ -23,8 +22,9 @@ inline long long simular_particula(int T, std::mt19937& rng, std::uniform_int_di
 
 int main(int argc, char* argv[]){
 
-    if(argc < 3 ) {
-        std::cerr << "Despierteee, debe introducir los datos de siguiente forma \n" << " <N> <T> [semilla]\n";
+    if(argc < 3) {
+        std::cerr << "Uso: " << argv[0] << " <N> <T> [semilla]\n";
+        return 1;
     }
 
     const long long N = std::atoll(argv[1]);
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]){
     uint32_t seed = 42u;
 
     if (argc >= 4) {
-    seed = static_cast<uint32_t>(std::strtoul(argv[3], nullptr, 10));
+        seed = static_cast<uint32_t>(std::strtoul(argv[3], nullptr, 10));
     }
 
 
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-        std::cout << std::fixed << std::setprecision(6);
+    std::cout << std::fixed << std::setprecision(6);
     
     // Para generar números pseudoaleatorios.
     std::mt19937 rng(seed);
@@ -68,14 +68,17 @@ int main(int argc, char* argv[]){
 
     // Impresión de resultados.
 
-    std::cout << "MSD: " << msd << "\n"; 
-    std::cout << "MSD teórico: " << T << "\n"; 
+    std::cout << "=== Resultados secuencial ===\n";
+    std::cout << "N: " << N << "\n";
+    std::cout << "T: " << T << "\n";
+    std::cout << "Semilla: " << seed << "\n";
+    std::cout << "MSD calculado: " << msd << "\n"; 
+    std::cout << "MSD teorico: " << T << "\n"; 
     std::cout << "Error relativo: " << error_relativo << "\n";
-    std::cout << "Tiempo: " << tiempo_seg << "\n";
+    std::cout << "Tiempo total: " << tiempo_seg << " s\n";
 
     return 0;
 }
-
 
 
 
